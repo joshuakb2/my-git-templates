@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Methods of listing files
+
+checkalltracked='git ls-files'
+checkonlystaged='git diff --staged --name-only'
+
+# Choose which of the above methods to generate a list of files to check
+mode=checkonlystaged
+
+oldIFS="$IFS"
+IFS=$'\n'
+files=( $( eval ${!mode} ) )
+
+if (( ${#files[@]} == 0 )); then
+    exit 0
+fi
+
+todos=( $(grep -PRHin --color=always '\bTODO\b' "${files[@]}") )
+
+IFS="$oldIFS"
+
+if [[ "${todos[@]}" ]]; then
+    echo "Found ${#todos[@]} TODOs:"
+    for t in "${todos[@]}"; do
+        if [[ $t =~ ^([^:]+):(.+)$ ]]; then
+            # Get filename with color codes
+            file="$(printf '%q\n' "${BASH_REMATCH[1]}")"
+
+            # Separate colors from filename
+            separated=( $(echo $file | perl -pe 's/^\$'\''(?<pre>(?:\\E\[(?:m|K|[0-9;]+m))*)(?<file>.+?)(?<post>(?:\\E\[(?:m|K|[0-9;]+m))*)'\''$/$+{pre} $+{file} $+{post}/') )
+            
+            precolor=${separated[0]}
+            file=${separated[1]}
+            postcolor=${separated[2]}
+            
+            #echo "precolor=$precolor"
+            #echo "file=$file"
+            #echo "postcolor=$postcolor"
+            
+            # Get the relative path to the file from the user's current directory
+            # and reapply the color codes.
+            relative="$precolor$(realpath --relative-to="./$GIT_PREFIX" "$file")$postcolor"
+
+            echo -e "$relative:${BASH_REMATCH[2]}"
+        else
+            echo "$t"
+        fi
+    done
+
+    echo
+    echo 'Aborting commit.'
+    echo 'To bypass this check, use git commit --no-verify'
+    echo
+    
+    exit 1 # Abort commit
+fi
