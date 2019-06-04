@@ -1,5 +1,9 @@
 #!/bin/bash
 
+red() {
+    echo -e '\e[31m'"$@"'\e[m'
+}
+
 # Methods of listing files
 
 checkalltracked='git ls-files'
@@ -16,12 +20,16 @@ if (( ${#files[@]} == 0 )); then
     exit 0
 fi
 
+#################################################################
+# CHECK FOR TODOS IN SELECTED FILES
+#################################################################
+
 todos=( $(grep -PRHin --color=always '\bTODO\b' "${files[@]}") )
 
 IFS="$oldIFS"
 
 if [[ "${todos[@]}" ]]; then
-    echo "Found ${#todos[@]} TODOs:"
+    red "Found ${#todos[@]} TODOs:"
     for t in "${todos[@]}"; do
         if [[ $t =~ ^([^:]+):(.+)$ ]]; then
             # Get filename with color codes
@@ -47,11 +55,27 @@ if [[ "${todos[@]}" ]]; then
             echo "$t"
         fi
     done
+    echo
 
+    # Abort commit
+    abort=true
+fi
+
+
+#################################################################
+# FIND AND NOTIFY USER OF TRAILING WHITESPACE ERRORS
+#################################################################
+
+if [[ "$(git diff --cached | grep -P '^\+.*\s+$')" ]]; then
+    red 'Found whitespace errors in the staged changes.'
+    echo 'Try git diff --cached to identify the errors.'
     echo
+    abort=true
+fi
+
+if [[ "$abort" == "true" ]]; then
     echo 'Aborting commit.'
-    echo 'To bypass this check, use git commit --no-verify'
+    echo 'To bypass these checks, use git commit --no-verify'
     echo
-    
-    exit 1 # Abort commit
+    exit 1
 fi
