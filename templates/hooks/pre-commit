@@ -7,7 +7,7 @@ red() {
 # Methods of listing files
 
 checkalltracked='git ls-files'
-checkonlystaged='git diff --staged --name-only'
+checkonlystaged='git diff --staged --name-only --no-renames | ( while read f; do if [[ -f "$f" ]]; then echo "$f"; fi; done; )'
 
 # Choose which of the above methods to generate a list of files to check
 mode=checkonlystaged
