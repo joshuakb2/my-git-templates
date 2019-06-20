@@ -7,14 +7,17 @@ red() {
 # Methods of listing files
 
 checkalltracked='git ls-files'
-checkonlystaged='git diff --staged --name-only --no-renames | ( while read f; do if [[ -f "$f" ]]; then echo "$f"; fi; done; )'
+checkonlystaged='git diff --staged --name-status --no-renames | grep -P '\''^[^D]'\'' | sed -E '\''s/^\S+\s+(.+)$/\1/'\'
 
 # Choose which of the above methods to generate a list of files to check
 mode=checkonlystaged
 
 oldIFS="$IFS"
 IFS=$'\n'
+
+echo -n 'Listing files to check for TODOs...'
 files=( $( eval ${!mode} ) )
+echo -e -n "\033[1K\r"
 
 if (( ${#files[@]} == 0 )); then
     exit 0
@@ -24,7 +27,9 @@ fi
 # CHECK FOR TODOS IN SELECTED FILES
 #################################################################
 
-todos=( $(grep -PRHin --color=always '\bTODO\b' "${files[@]}") )
+echo -n 'Checking for TODOs...'
+todos=( $(grep -PRHin --color=always '\bTODO\b' "${files[@]}" | head -n 50) )
+echo -e -n "\033[1K\r"
 
 IFS="$oldIFS"
 
@@ -66,11 +71,15 @@ fi
 # FIND AND NOTIFY USER OF TRAILING WHITESPACE ERRORS
 #################################################################
 
+echo -n 'Checking for whitespace errors...'
 if [[ "$(git diff --cached | grep -P '^\+.*\s+$')" ]]; then
+    echo -e -n "\033[1K\r"
     red 'Found whitespace errors in the staged changes.'
     echo 'Try git diff --cached to identify the errors.'
     echo
     abort=true
+else
+    echo -e -n "\033[1K\r"
 fi
 
 if [[ "$abort" == "true" ]]; then
