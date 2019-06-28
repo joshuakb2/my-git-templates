@@ -27,43 +27,49 @@ fi
 # CHECK FOR TODOS IN SELECTED FILES
 #################################################################
 
-echo -n 'Checking for TODOs...'
-todos=( $(grep -PRHin --color=always '\bTODO\b' "${files[@]}" | head -n 50) )
-echo -e -n "\033[1K\r"
+if [[ "$SKIP_TODOS" != true ]]; then
+    echo -n 'Checking for TODOs...'
+    todos=( $(grep -PRHin --color=always '\bTODO\b' "${files[@]}" | head -n 50) )
+    echo -e -n "\033[1K\r"
 
-IFS="$oldIFS"
+    IFS="$oldIFS"
 
-if [[ "${todos[@]}" ]]; then
-    red "Found ${#todos[@]} TODOs:"
-    for t in "${todos[@]}"; do
-        if [[ $t =~ ^([^:]+):(.+)$ ]]; then
-            # Get filename with color codes
-            file="$(printf '%q\n' "${BASH_REMATCH[1]}")"
+    if [[ "${todos[@]}" ]]; then
+        red "Found ${#todos[@]} TODOs:"
+        for t in "${todos[@]}"; do
+            if [[ $t =~ ^([^:]+):(.+)$ ]]; then
+                # Get filename with color codes
+                file="$(printf '%q\n' "${BASH_REMATCH[1]}")"
 
-            # Separate colors from filename
-            separated=( $(echo $file | perl -pe 's/^\$'\''(?<pre>(?:\\E\[(?:m|K|[0-9;]+m))*)(?<file>.+?)(?<post>(?:\\E\[(?:m|K|[0-9;]+m))*)'\''$/$+{pre} $+{file} $+{post}/') )
-            
-            precolor=${separated[0]}
-            file=${separated[1]}
-            postcolor=${separated[2]}
-            
-            #echo "precolor=$precolor"
-            #echo "file=$file"
-            #echo "postcolor=$postcolor"
-            
-            # Get the relative path to the file from the user's current directory
-            # and reapply the color codes.
-            relative="$precolor$(realpath --relative-to="./$GIT_PREFIX" "$file")$postcolor"
+                # Separate colors from filename
+                separated=( $(echo $file | perl -pe 's/^\$'\''(?<pre>(?:\\E\[(?:m|K|[0-9;]+m))*)(?<file>.+?)(?<post>(?:\\E\[(?:m|K|[0-9;]+m))*)'\''$/$+{pre} $+{file} $+{post}/') )
 
-            echo -e "$relative:${BASH_REMATCH[2]}"
-        else
-            echo "$t"
-        fi
-    done
-    echo
+                precolor=${separated[0]}
+                file=${separated[1]}
+                postcolor=${separated[2]}
 
-    # Abort commit
-    abort=true
+                #echo "precolor=$precolor"
+                #echo "file=$file"
+                #echo "postcolor=$postcolor"
+
+                # Get the relative path to the file from the user's current directory
+                # and reapply the color codes.
+                relative="$precolor$(realpath --relative-to="./$GIT_PREFIX" "$file")$postcolor"
+
+                echo -e "$relative:${BASH_REMATCH[2]}"
+            else
+                echo "$t"
+            fi
+        done
+        echo
+
+        # Abort commit
+        abort=true
+
+        echo 'To skip checking TODOs, use the environment variable SKIP_TODOS=true.'
+        echo
+    fi
+
 fi
 
 
@@ -71,20 +77,27 @@ fi
 # FIND AND NOTIFY USER OF TRAILING WHITESPACE ERRORS
 #################################################################
 
-echo -n 'Checking for whitespace errors...'
-if [[ "$(git diff --cached | grep -P '^\+.*\s+$')" ]]; then
-    echo -e -n "\033[1K\r"
-    red 'Found whitespace errors in the staged changes.'
-    echo 'Try git diff --cached to identify the errors.'
-    echo
-    abort=true
-else
-    echo -e -n "\033[1K\r"
+if [[ "$SKIP_WHITESPACE" != "true" ]]; then
+    echo -n 'Checking for whitespace errors...'
+
+    if [[ "$(git diff --cached | grep -P '^\+.*\s+$')" ]]; then
+        echo -e -n "\033[1K\r"
+        red 'Found whitespace errors in the staged changes.'
+        echo 'Try git diff --cached to identify the errors.'
+        echo
+
+        abort=true
+
+        echo 'To skip checking for trailing whitespace, use the environment'
+        echo 'variable SKIP_WHITESPACE=true.'
+    else
+        echo -e -n "\033[1K\r"
+    fi
 fi
 
 if [[ "$abort" == "true" ]]; then
     echo 'Aborting commit.'
-    echo 'To bypass these checks, use git commit --no-verify'
+    echo 'To bypass these checks, use git commit --no-verify.'
     echo
     exit 1
 fi
