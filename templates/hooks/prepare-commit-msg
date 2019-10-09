@@ -1,0 +1,22 @@
+#!/bin/bash
+
+commitMsgFile="$1"
+commitMsgType="$2"
+amendedCommit="$3"
+
+if [[ "$amendedCommit" ]]; then
+    exit 0
+fi
+
+case "$commitMsgType" in
+    template)
+        issue="$(git config branch.$(git rev-parse --abbrev-ref HEAD).description | grep -Po '(?<=#)\d+')"
+        if [[ "$issue" ]]; then
+            mv "$commitMsgFile" "$commitMsgFile.temp"
+            echo "refs #$issue" >>"$commitMsgFile"
+            tail -n +2 "$commitMsgFile.temp" >> "$commitMsgFile"
+            rm "$commitMsgFile.temp"
+        fi
+        exit 0
+        ;;
+esac
