@@ -53,7 +53,7 @@ if (( $# == 0 )); then
 else
     for repo in "$@"; do
         if [[ -d "$repo/.git" ]]; then
-            echo "Installing into $repo..."
+            echo "Installing into $repo"
             if ! cp -Pr "$DIR/links/." "$repo/.git"; then
                 echo "Failed to install into $repo! D:"
             fi
