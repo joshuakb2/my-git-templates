@@ -69,7 +69,6 @@ if [[ "$SKIP_TODOS" != true ]]; then
         echo 'To skip checking TODOs, use the environment variable SKIP_TODOS=true.'
         echo
     fi
-
 fi
 
 
@@ -80,10 +79,46 @@ fi
 if [[ "$SKIP_WHITESPACE" != "true" ]]; then
     echo -n 'Checking for whitespace errors...'
 
-    if [[ "$(git diff --cached | grep -P '^\+.*\s+$')" ]]; then
+    stagedFiles=( $(git diff --name-only --cached) )
+    whitespaceErrors=()
+
+    hunkStart='^@@ -[0-9]+,[0-9]+ \+([0-9]+),[0-9]+ @@'
+    addition='^\+'
+    deletion='^-'
+    endsWithSpace='[[:space:]]+$'
+
+    for file in ${stagedFiles[@]}; do
+        n=0
+        inHunk= # falsy
+
+        while IFS= read -r line; do
+            n=$(( n + 1 ))
+
+            if [[ $line =~ $hunkStart ]]; then
+                n=$(( BASH_REMATCH[1] - 1 ))
+                inHunk=true
+            elif ! [[ $inHunk ]]; then
+                continue
+            fi
+
+            if [[ $line =~ $addition ]]; then
+                if [[ $line =~ $endsWithSpace ]]; then
+                    whitespaceErrors+=( $file:$n )
+                fi
+            elif [[ $line =~ $deletion ]]; then
+                (( n -= 1 ));
+            else
+                : # Context line, ignore it
+            fi
+        done < <(git diff --cached $file)
+    done
+
+    if (( ${#whitespaceErrors[@]} > 0 )); then
         echo -e -n "\033[1K\r"
-        red 'Found whitespace errors in the staged changes.'
-        echo 'Try git diff --cached to identify the errors.'
+        red 'Found whitespace errors in the staged changes:'
+        for (( i = 0; i < ${#whitespaceErrors[@]}; i++ )); do
+            echo "${whitespaceErrors[$i]}"
+        done
         echo
 
         abort=true
