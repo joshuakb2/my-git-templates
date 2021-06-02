@@ -88,6 +88,10 @@ if [[ "$SKIP_WHITESPACE" != "true" ]]; then
     endsWithSpace='[[:space:]]+$'
 
     for file in ${stagedFiles[@]}; do
+        if [[ ! -f $file ]]; then
+            continue
+        fi
+
         n=0
         inHunk= # falsy
 
