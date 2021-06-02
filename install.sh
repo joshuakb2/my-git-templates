@@ -24,8 +24,8 @@ if (( $# == 0 )); then
     echo 'In order to install git templates on this machine,'
     echo 'we are going to run the following commands:'
     echo
-    echo "ln -sf '$DIR/links' \"\$HOME/.git-templates\""
-    echo "ln -sf '$DIR/templates' '$DIR/links/templateDir'"
+    echo "ln -sfn '$DIR/links' \"\$HOME/.git-templates\""
+    echo "ln -sfn '$DIR/templates' '$DIR/links/templateDir'"
     echo "git config --global init.templatedir \"\$HOME/.git-templates\""
     echo
     echo 'After this, if you move this repository you will have to reinstall.'
@@ -47,8 +47,8 @@ if (( $# == 0 )); then
         esac
     done
 
-    ln -sf "$DIR/links" "$HOME/.git-templates"
-    ln -sf "$DIR/templates" "$DIR/links/templateDir"
+    ln -sfn "$DIR/links" "$HOME/.git-templates"
+    ln -sfn "$DIR/templates" "$DIR/links/templateDir"
     git config --global init.templatedir "$HOME/.git-templates"
 else
     for repo in "$@"; do
