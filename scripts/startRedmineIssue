@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -e
+
+help() {
+    echo "Usage: $0 <redmine issue number> <branch-name>"
+    echo
+    echo 'Creates a new branch and marks that it is for a particular Redmine issue.'
+    echo 'Subsequent commits with have a default commit message that references the issue.'
+}
+
+if [[ $* == --help ]]; then
+    help
+    exit
+fi
+
+if (( $# != 2 )); then
+    help >&2
+    exit 1
+fi
+
+issue=$1
+branch=$2
+
+if [[ ! $issue =~ ^[0-9]{5,5}$ ]]; then
+    echo >&2 "Invalid issue number: \"$issue\""
+    exit 1
+fi
+
+git checkout -b "$branch"
+git config branch."$branch".description "Redmine #$issue"
