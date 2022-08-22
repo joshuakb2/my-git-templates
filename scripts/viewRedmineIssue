@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -e
+
+help() {
+    echo "Usage: $0"
+    echo
+    echo 'Used in a git repository on a branch tied to a Redmine issue,'
+    echo 'opens that Redmine issue in your web browser.'
+}
+
+if [[ $* == --help ]]; then
+    help
+    exit
+fi
+
+if (( $# != 0 )); then
+    help >&2
+    exit 1
+fi
+
+branch=$(git branch --show-current)
+desc=$(git config branch."$branch".description)
+
+issuePattern='#([0-9]{5,5})'
+
+if [[ ! $desc =~ $issuePattern ]]; then
+    echo >&2 'The current branch is not tied to any Redmine issue'
+    exit 1
+fi
+
+issue=${BASH_REMATCH[1]}
+url="http://redmine.eng.enseo.com/issues/$issue"
+
+echo "Opening issue $issue in a new tab"
+nohup x-www-browser "$url" >/dev/null 2>&1 &
