@@ -3,9 +3,12 @@
 set -e
 
 help() {
-    echo "Usage: $0 <redmine issue number> <branch-name>"
+    echo "Usage: $0 <redmine issue number> [branch-name]"
     echo
-    echo 'Creates a new branch and marks that it is for a particular Redmine issue.'
+    echo 'Marks that the specified branch is for a particular Redmine issue.'
+    echo 'Creates a new branch and switches to it if it does not exist.'
+    echo 'Uses the currently checked out branch by default.'
+    echo
     echo 'Subsequent commits with have a default commit message that references the issue.'
 }
 
@@ -14,7 +17,7 @@ if [[ $* == --help ]]; then
     exit
 fi
 
-if (( $# != 2 )); then
+if (( $# == 0 || $# > 2 )); then
     help >&2
     exit 1
 fi
@@ -27,5 +30,35 @@ if [[ ! $issue =~ ^[0-9]{5,5}$ ]]; then
     exit 1
 fi
 
-git checkout -b "$branch"
-git config branch."$branch".description "Redmine #$issue"
+gitdir=$(pwd)
+while true; do
+    if [[ -d "$gitdir"/.git ]]; then break; fi
+    if [[ $gitdir == / ]]; then
+        echo >&2 'You must use this command inside a git repository!'
+        exit 1
+    fi
+    gitdir=$(dirname "$gitdir")
+done
+
+gitdir+='/.git'
+
+if [[ $branch ]]; then
+    if [[ ! -f "$gitdir"/refs/heads/"$branch" ]]; then
+        git checkout -b "$branch"
+    fi
+else
+    pattern='^ref: refs/heads/(.+)$'
+
+    if [[ $(cat "$gitdir"/HEAD) =~ $pattern ]]; then
+        branch=${BASH_REMATCH[1]}
+    else
+        echo 2>& 'There is no checked out branch.'
+        echo >&2 'You must check out a branch first or specify which one you mean.'
+        exit 1
+    fi
+fi
+
+desc="Redmine #$issue"
+
+git config branch."$branch".description "$desc"
+echo "Updated branch \"$branch\" description: $desc"
