@@ -114,7 +114,7 @@ if [[ "$SKIP_WHITESPACE" != "true" ]]; then
             else
                 : # Context line, ignore it
             fi
-        done < <(git diff --cached $file)
+        done < <(git diff --cached -- "$file")
     done
 
     if (( ${#whitespaceErrors[@]} > 0 )); then
